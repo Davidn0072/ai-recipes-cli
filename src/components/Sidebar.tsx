@@ -1,20 +1,16 @@
-export type SidebarView = 'browse' | 'new-recipe' | 'about';
+export type SidebarView = 'browse' | 'about';
 
 type SidebarProps = {
   active: SidebarView;
   onSelect: (view: SidebarView) => void;
+  onNewRecipe: () => void;
 };
 
-const navItems: { id: SidebarView; label: string; description: string }[] = [
+const pageNavItems: { id: SidebarView; label: string; description: string }[] = [
   {
     id: 'browse',
     label: 'Browse & search',
     description: 'See all recipes and filter by name',
-  },
-  {
-    id: 'new-recipe',
-    label: 'New recipe',
-    description: 'Add a recipe to your collection',
   },
   {
     id: 'about',
@@ -23,7 +19,7 @@ const navItems: { id: SidebarView; label: string; description: string }[] = [
   },
 ];
 
-export function Sidebar({ active, onSelect }: SidebarProps) {
+export function Sidebar({ active, onSelect, onNewRecipe }: SidebarProps) {
   return (
     <aside
       className="flex h-full min-h-0 w-64 shrink-0 flex-col border-r border-stone-800/80 bg-stone-950 text-stone-100"
@@ -38,7 +34,7 @@ export function Sidebar({ active, onSelect }: SidebarProps) {
         </h1>
       </div>
       <nav className="flex flex-1 flex-col gap-1 p-3">
-        {navItems.map((item) => {
+        {pageNavItems.map((item) => {
           const isActive = active === item.id;
           return (
             <button
@@ -63,6 +59,16 @@ export function Sidebar({ active, onSelect }: SidebarProps) {
             </button>
           );
         })}
+        <button
+          type="button"
+          onClick={onNewRecipe}
+          className="group rounded-lg px-3 py-3 text-left text-stone-300 transition-colors hover:bg-stone-900 hover:text-stone-50"
+        >
+          <span className="block font-medium">New recipe</span>
+          <span className="mt-0.5 block text-xs text-stone-500 group-hover:text-stone-400">
+            Add a recipe in a new window
+          </span>
+        </button>
       </nav>
     </aside>
   );
