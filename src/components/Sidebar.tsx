@@ -26,7 +26,7 @@ const navItems: { id: SidebarView; label: string; description: string }[] = [
 export function Sidebar({ active, onSelect }: SidebarProps) {
   return (
     <aside
-      className="flex h-full w-64 shrink-0 flex-col border-r border-stone-800/80 bg-stone-950 text-stone-100"
+      className="flex h-full min-h-0 w-64 shrink-0 flex-col border-r border-stone-800/80 bg-stone-950 text-stone-100"
       aria-label="Main navigation"
     >
       <div className="border-b border-stone-800/80 px-5 py-6">
