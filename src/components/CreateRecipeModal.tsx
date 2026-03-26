@@ -30,7 +30,8 @@ const emptyForm = (): FormState => ({
 const EXAMPLE_FORM: FormState = {
   title: 'Quick tomato pasta',
   ingredientsText: 'spaghetti\nolive oil\ngarlic\ncanned tomatoes\nfresh basil',
-  instructions: '',
+  instructions:
+    '1. Cook spaghetti until al dente; reserve a cup of pasta water.\n2. Sauté sliced garlic in olive oil until fragrant.\n3. Add tomatoes, simmer 10 min; season with salt and pepper.\n4. Toss pasta with sauce, adding pasta water as needed. Top with basil.',
   difficulty: 'easy',
   cooking_time: 25,
 };
@@ -195,7 +196,7 @@ export function CreateRecipeModal({ open, onClose, editingRecipe, onSuccess }: C
 
   return (
     <div
-      className="fixed inset-0 z-50 flex items-center justify-center p-4"
+      className="fixed inset-0 z-50 flex items-start justify-center overflow-y-auto p-4 py-8 sm:py-10"
       role="presentation"
       onMouseDown={(e) => {
         if (e.target === e.currentTarget) onClose();
@@ -206,7 +207,7 @@ export function CreateRecipeModal({ open, onClose, editingRecipe, onSuccess }: C
         role="dialog"
         aria-modal="true"
         aria-labelledby={titleId}
-        className="relative z-10 w-full max-w-lg rounded-2xl border border-stone-200 bg-white p-6 shadow-xl"
+        className="relative z-10 max-h-[calc(100dvh-40px)] w-full max-w-[824px] -translate-y-[20px] overflow-y-auto rounded-2xl border border-stone-200 bg-white p-5 shadow-xl sm:p-6"
         onMouseDown={(e) => e.stopPropagation()}
       >
         <div className="flex items-start justify-between gap-4">
@@ -225,46 +226,32 @@ export function CreateRecipeModal({ open, onClose, editingRecipe, onSuccess }: C
           </button>
         </div>
 
-        {isEdit ? (
-          <p className="mt-3 text-sm leading-relaxed text-stone-600">
-            Update title, ingredients, or instructions. Only the title is required to save.
-          </p>
-        ) : (
-          <>
-            <p className="mt-3 text-sm leading-relaxed text-stone-600">
-              Start with a <strong className="font-medium text-stone-800">title</strong> (required to save).
-              Add ingredients and use{' '}
-              <span className="whitespace-nowrap font-medium text-violet-900">Get instructions by AI</span> (needs
-              title + ingredients), or type instructions yourself.
-            </p>
-            <div className="mt-3 flex flex-wrap gap-2">
-              <button
-                type="button"
-                onClick={() => {
-                  setError(null);
-                  setForm(EXAMPLE_FORM);
-                }}
-                disabled={submitting || aiLoading}
-                className="rounded-lg border border-stone-200 bg-stone-50 px-3 py-1.5 text-xs font-medium text-stone-800 shadow-sm transition hover:bg-stone-100 disabled:pointer-events-none disabled:opacity-50"
-              >
-                Fill with example
-              </button>
-              <button
-                type="button"
-                onClick={() => {
-                  setError(null);
-                  setForm(emptyForm());
-                }}
-                disabled={submitting || aiLoading}
-                className="rounded-lg border border-stone-200 bg-white px-3 py-1.5 text-xs font-medium text-stone-600 shadow-sm transition hover:bg-stone-50 disabled:pointer-events-none disabled:opacity-50"
-              >
-                Clear form
-              </button>
-            </div>
-          </>
-        )}
+        <div className="mt-1 flex flex-wrap gap-1.5">
+          <button
+            type="button"
+            onClick={() => {
+              setError(null);
+              setForm(EXAMPLE_FORM);
+            }}
+            disabled={submitting || aiLoading}
+            className="rounded-lg border border-stone-200 bg-stone-50 px-3 py-1.5 text-xs font-medium text-stone-800 shadow-sm transition hover:bg-stone-100 disabled:pointer-events-none disabled:opacity-50"
+          >
+            Fill with example
+          </button>
+          <button
+            type="button"
+            onClick={() => {
+              setError(null);
+              setForm(emptyForm());
+            }}
+            disabled={submitting || aiLoading}
+            className="rounded-lg border border-stone-200 bg-white px-3 py-1.5 text-xs font-medium text-stone-600 shadow-sm transition hover:bg-stone-50 disabled:pointer-events-none disabled:opacity-50"
+          >
+            Clear form
+          </button>
+        </div>
 
-        <form onSubmit={handleSubmit} className="mt-6 space-y-4">
+        <form onSubmit={handleSubmit} className="mt-3 space-y-2">
           <div>
             <label htmlFor="recipe-title" className="block text-sm font-medium text-stone-700">
               Title <span className="text-red-600">*</span>
@@ -293,64 +280,66 @@ export function CreateRecipeModal({ open, onClose, editingRecipe, onSuccess }: C
               id="recipe-ingredients"
               value={form.ingredientsText}
               onChange={(e) => setForm((f) => ({ ...f, ingredientsText: e.target.value }))}
-              rows={4}
+              rows={3}
               placeholder={'e.g.\nchicken thighs\nlemon\ngarlic\nolive oil'}
               className="mt-1 w-full rounded-lg border border-stone-200 px-3 py-2 text-stone-900 shadow-sm placeholder:text-stone-400 focus:border-amber-500/60 focus:outline-none focus:ring-2 focus:ring-amber-500/25"
               disabled={submitting || aiLoading}
             />
           </div>
 
-          <div>
-            <div className="flex flex-wrap items-center justify-between gap-2">
-              <label htmlFor="recipe-instructions" className="block text-sm font-medium text-stone-700">
-                Instructions
-              </label>
-              <button
-                type="button"
-                onClick={handleGetAiInstructions}
-                disabled={submitting || aiLoading || !canUseAi}
-                title={
-                  canUseAi
-                    ? 'Generate instructions with AI'
-                    : 'Add a title and at least one ingredient to use AI'
-                }
-                className="inline-flex items-center gap-1.5 rounded-lg border border-violet-200 bg-violet-50 px-3 py-1.5 text-xs font-medium text-violet-900 shadow-sm transition hover:border-violet-300 hover:bg-violet-100 disabled:pointer-events-none disabled:opacity-50"
-              >
-                {aiLoading ? (
-                  <>
-                    <span className="inline-block h-3.5 w-3.5 animate-spin rounded-full border-2 border-violet-400 border-t-transparent" />
-                    Generating…
-                  </>
-                ) : (
-                  <>
-                    <svg className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden>
-                      <path
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                        strokeWidth={2}
-                        d="M13 10V3L4 14h7v7l9-11h-7z"
-                      />
-                    </svg>
-                    Get instructions by AI
-                  </>
-                )}
-              </button>
-            </div>
-            <p className="mt-1.5 text-xs text-stone-500">
-              The AI button stays off until both a title and at least one ingredient are filled in.
+          <div className="flex flex-col gap-1 rounded-lg border border-violet-100 bg-violet-50/40 px-3 py-2 sm:flex-row sm:items-center sm:justify-between">
+            <p className="text-xs text-stone-600">
+              Optional: generate cooking steps from the title and ingredients above.
             </p>
+            <button
+              type="button"
+              onClick={handleGetAiInstructions}
+              disabled={submitting || aiLoading || !canUseAi}
+              title={
+                canUseAi
+                  ? 'Generate cooking steps with AI'
+                  : 'Add a title and at least one ingredient first'
+              }
+              className="inline-flex shrink-0 items-center justify-center gap-1.5 rounded-lg border border-violet-200 bg-white px-3 py-1.5 text-xs font-medium text-violet-900 shadow-sm transition hover:border-violet-300 hover:bg-violet-50 disabled:pointer-events-none disabled:opacity-50"
+            >
+              {aiLoading ? (
+                <>
+                  <span className="inline-block h-3.5 w-3.5 animate-spin rounded-full border-2 border-violet-400 border-t-transparent" />
+                  Generating…
+                </>
+              ) : (
+                <>
+                  <svg className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden>
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth={2}
+                      d="M13 10V3L4 14h7v7l9-11h-7z"
+                    />
+                  </svg>
+                  Generate with AI
+                </>
+              )}
+            </button>
+          </div>
+
+          <div>
+            <label htmlFor="recipe-instructions" className="block text-sm font-medium text-stone-700">
+              Instructions
+            </label>
+            <p className="mt-0.5 text-xs text-stone-500">How to cook it, or use Generate with AI above</p>
             <textarea
               id="recipe-instructions"
               value={form.instructions}
               onChange={(e) => setForm((f) => ({ ...f, instructions: e.target.value }))}
-              rows={4}
+              rows={3}
               placeholder="e.g. Heat oven to 400°F. Season chicken, roast 35 min until golden… (optional)"
-              className="mt-1 w-full rounded-lg border border-stone-200 px-3 py-2 text-stone-900 shadow-sm placeholder:text-stone-400 focus:border-amber-500/60 focus:outline-none focus:ring-2 focus:ring-amber-500/25"
+              className="mt-1 w-full resize-y rounded-lg border border-stone-200 px-3 py-2 text-sm leading-relaxed text-stone-900 shadow-sm placeholder:text-stone-400 focus:border-amber-500/60 focus:outline-none focus:ring-2 focus:ring-amber-500/25"
               disabled={submitting || aiLoading}
             />
           </div>
 
-          <div className="grid grid-cols-2 gap-4">
+          <div className="grid grid-cols-2 gap-2">
             <div>
               <label htmlFor="recipe-difficulty" className="block text-sm font-medium text-stone-700">
                 Difficulty
@@ -396,7 +385,7 @@ export function CreateRecipeModal({ open, onClose, editingRecipe, onSuccess }: C
               {error}
             </p>
           )}
-          <div className="flex justify-end gap-2 pt-2">
+          <div className="mt-[15px] flex justify-end gap-2 pt-0">
             <button
               type="button"
               onClick={onClose}
