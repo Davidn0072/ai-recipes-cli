@@ -95,14 +95,21 @@ export function CreateRecipeModal({ open, onClose, editingRecipe, onSuccess }: C
 
   if (!open) return null;
 
+  const ingredientsForAi = parseIngredients(form.ingredientsText);
+  const canUseAi = form.title.trim().length > 0 && ingredientsForAi.length > 0;
+
   const handleGetAiInstructions = async () => {
     const title = form.title.trim();
     if (!title) {
       setError('Add a title before requesting AI instructions.');
       return;
     }
-    setError(null);
     const ingredients = parseIngredients(form.ingredientsText);
+    if (ingredients.length === 0) {
+      setError('Add at least one ingredient before requesting AI instructions.');
+      return;
+    }
+    setError(null);
     setAiLoading(true);
     try {
       const res = await fetch(`${API_BASE}/recipes/generate`, {
@@ -226,9 +233,9 @@ export function CreateRecipeModal({ open, onClose, editingRecipe, onSuccess }: C
           <>
             <p className="mt-3 text-sm leading-relaxed text-stone-600">
               Start with a <strong className="font-medium text-stone-800">title</strong> (required to save).
-              Ingredients and instructions are optional—add ingredients, then use{' '}
-              <span className="whitespace-nowrap font-medium text-violet-900">Get instructions by AI</span> or type
-              steps yourself.
+              Add ingredients and use{' '}
+              <span className="whitespace-nowrap font-medium text-violet-900">Get instructions by AI</span> (needs
+              title + ingredients), or type instructions yourself.
             </p>
             <div className="mt-3 flex flex-wrap gap-2">
               <button
@@ -279,7 +286,9 @@ export function CreateRecipeModal({ open, onClose, editingRecipe, onSuccess }: C
             <label htmlFor="recipe-ingredients" className="block text-sm font-medium text-stone-700">
               Ingredients
             </label>
-            <p className="mt-0.5 text-xs text-stone-500">One ingredient per line (optional)</p>
+            <p className="mt-0.5 text-xs text-stone-500">
+              One ingredient per line (optional for save; required for AI)
+            </p>
             <textarea
               id="recipe-ingredients"
               value={form.ingredientsText}
@@ -299,7 +308,12 @@ export function CreateRecipeModal({ open, onClose, editingRecipe, onSuccess }: C
               <button
                 type="button"
                 onClick={handleGetAiInstructions}
-                disabled={submitting || aiLoading}
+                disabled={submitting || aiLoading || !canUseAi}
+                title={
+                  canUseAi
+                    ? 'Generate instructions with AI'
+                    : 'Add a title and at least one ingredient to use AI'
+                }
                 className="inline-flex items-center gap-1.5 rounded-lg border border-violet-200 bg-violet-50 px-3 py-1.5 text-xs font-medium text-violet-900 shadow-sm transition hover:border-violet-300 hover:bg-violet-100 disabled:pointer-events-none disabled:opacity-50"
               >
                 {aiLoading ? (
@@ -323,7 +337,7 @@ export function CreateRecipeModal({ open, onClose, editingRecipe, onSuccess }: C
               </button>
             </div>
             <p className="mt-1.5 text-xs text-stone-500">
-              Requires a title. Adding ingredients improves the AI result.
+              The AI button stays off until both a title and at least one ingredient are filled in.
             </p>
             <textarea
               id="recipe-instructions"
