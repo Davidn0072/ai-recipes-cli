@@ -53,6 +53,7 @@ export function CreateRecipeModal({ open, onClose, editingRecipe, onSuccess }: C
   const titleId = useId();
   const [form, setForm] = useState<FormState>(emptyForm);
   const [submitting, setSubmitting] = useState(false);
+  const [aiLoading, setAiLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   const isEdit = Boolean(editingRecipe?._id);
@@ -77,6 +78,52 @@ export function CreateRecipeModal({ open, onClose, editingRecipe, onSuccess }: C
   }, [open, onClose]);
 
   if (!open) return null;
+
+  const handleGetAiInstructions = async () => {
+    const title = form.title.trim();
+    if (!title) {
+      setError('Add a title before requesting AI instructions.');
+      return;
+    }
+    setError(null);
+    const ingredients = parseIngredients(form.ingredientsText);
+    setAiLoading(true);
+    try {
+      const res = await fetch(`${API_BASE}/recipes/generate`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ title, ingredients }),
+      });
+      const data: unknown = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        const msg =
+          typeof data === 'object' && data !== null && 'message' in data
+            ? String((data as { message: unknown }).message)
+            : `Request failed (${res.status})`;
+        setError(msg);
+        return;
+      }
+      const o = data as Record<string, unknown>;
+      const recipeText = typeof o.recipe === 'string' ? o.recipe : '';
+      const diffRaw = typeof o.difficulty === 'string' ? o.difficulty : 'easy';
+      const timeRaw = o.cooking_time;
+      const cookingNum =
+        typeof timeRaw === 'number' && Number.isFinite(timeRaw)
+          ? timeRaw
+          : parseInt(String(timeRaw ?? '0'), 10) || 0;
+
+      setForm((f) => ({
+        ...f,
+        instructions: recipeText.trim() || f.instructions,
+        difficulty: normalizeDifficulty(diffRaw),
+        cooking_time: cookingNum >= 0 ? cookingNum : f.cooking_time,
+      }));
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Network error');
+    } finally {
+      setAiLoading(false);
+    }
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -167,7 +214,7 @@ export function CreateRecipeModal({ open, onClose, editingRecipe, onSuccess }: C
               onChange={(e) => setForm((f) => ({ ...f, title: e.target.value }))}
               className="mt-1 w-full rounded-lg border border-stone-200 px-3 py-2 text-stone-900 shadow-sm focus:border-amber-500/60 focus:outline-none focus:ring-2 focus:ring-amber-500/25"
               autoComplete="off"
-              disabled={submitting}
+              disabled={submitting || aiLoading}
             />
           </div>
 
@@ -182,21 +229,48 @@ export function CreateRecipeModal({ open, onClose, editingRecipe, onSuccess }: C
               onChange={(e) => setForm((f) => ({ ...f, ingredientsText: e.target.value }))}
               rows={4}
               className="mt-1 w-full rounded-lg border border-stone-200 px-3 py-2 text-stone-900 shadow-sm focus:border-amber-500/60 focus:outline-none focus:ring-2 focus:ring-amber-500/25"
-              disabled={submitting}
+              disabled={submitting || aiLoading}
             />
           </div>
 
           <div>
-            <label htmlFor="recipe-instructions" className="block text-sm font-medium text-stone-700">
-              Instructions
-            </label>
+            <div className="flex flex-wrap items-center justify-between gap-2">
+              <label htmlFor="recipe-instructions" className="block text-sm font-medium text-stone-700">
+                Instructions
+              </label>
+              <button
+                type="button"
+                onClick={handleGetAiInstructions}
+                disabled={submitting || aiLoading}
+                className="inline-flex items-center gap-1.5 rounded-lg border border-violet-200 bg-violet-50 px-3 py-1.5 text-xs font-medium text-violet-900 shadow-sm transition hover:border-violet-300 hover:bg-violet-100 disabled:pointer-events-none disabled:opacity-50"
+              >
+                {aiLoading ? (
+                  <>
+                    <span className="inline-block h-3.5 w-3.5 animate-spin rounded-full border-2 border-violet-400 border-t-transparent" />
+                    Generating…
+                  </>
+                ) : (
+                  <>
+                    <svg className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden>
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        strokeWidth={2}
+                        d="M13 10V3L4 14h7v7l9-11h-7z"
+                      />
+                    </svg>
+                    Get instructions by AI
+                  </>
+                )}
+              </button>
+            </div>
             <textarea
               id="recipe-instructions"
               value={form.instructions}
               onChange={(e) => setForm((f) => ({ ...f, instructions: e.target.value }))}
               rows={4}
               className="mt-1 w-full rounded-lg border border-stone-200 px-3 py-2 text-stone-900 shadow-sm focus:border-amber-500/60 focus:outline-none focus:ring-2 focus:ring-amber-500/25"
-              disabled={submitting}
+              disabled={submitting || aiLoading}
             />
           </div>
 
@@ -215,7 +289,7 @@ export function CreateRecipeModal({ open, onClose, editingRecipe, onSuccess }: C
                   }))
                 }
                 className="mt-1 w-full rounded-lg border border-stone-200 px-3 py-2 text-stone-900 shadow-sm focus:border-amber-500/60 focus:outline-none focus:ring-2 focus:ring-amber-500/25"
-                disabled={submitting}
+                disabled={submitting || aiLoading}
               >
                 <option value="easy">Easy</option>
                 <option value="medium">Medium</option>
@@ -236,7 +310,7 @@ export function CreateRecipeModal({ open, onClose, editingRecipe, onSuccess }: C
                   setForm((f) => ({ ...f, cooking_time: Number(e.target.value) || 0 }))
                 }
                 className="mt-1 w-full rounded-lg border border-stone-200 px-3 py-2 text-stone-900 shadow-sm focus:border-amber-500/60 focus:outline-none focus:ring-2 focus:ring-amber-500/25"
-                disabled={submitting}
+                disabled={submitting || aiLoading}
               />
             </div>
           </div>
@@ -251,14 +325,14 @@ export function CreateRecipeModal({ open, onClose, editingRecipe, onSuccess }: C
               type="button"
               onClick={onClose}
               className="rounded-lg border border-stone-200 px-4 py-2 text-sm font-medium text-stone-700 hover:bg-stone-50"
-              disabled={submitting}
+              disabled={submitting || aiLoading}
             >
               Cancel
             </button>
             <button
               type="submit"
               className="rounded-lg bg-amber-600 px-4 py-2 text-sm font-medium text-white hover:bg-amber-700 disabled:opacity-50"
-              disabled={submitting}
+              disabled={submitting || aiLoading}
             >
               {submitting ? 'Saving…' : isEdit ? 'Update recipe' : 'Save recipe'}
             </button>
