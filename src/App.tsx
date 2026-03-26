@@ -54,6 +54,7 @@ function App() {
                 setEditingRecipe(recipe);
                 setRecipeModalOpen(true);
               }}
+              onRecipeDeleted={() => setRecipeListKey((k) => k + 1)}
             />
           )}
           {view === 'about' && <AboutPanel />}

@@ -13,6 +13,7 @@ export type RecipeRecord = {
 type BrowseSearchPanelProps = {
   reloadKey: number;
   onEditRecipe: (recipe: RecipeRecord) => void;
+  onRecipeDeleted?: () => void;
 };
 
 function difficultyBadgeClass(difficulty?: string): string {
@@ -58,9 +59,13 @@ function matchesQuery(r: RecipeRecord, q: string): boolean {
 function RecipeCard({
   recipe: r,
   onEdit,
+  onDelete,
+  deletePending,
 }: {
   recipe: RecipeRecord;
   onEdit: () => void;
+  onDelete: () => void;
+  deletePending: boolean;
 }) {
   const ingredientsLine = ingredientPreview(r);
   const hasTime = r.cooking_time != null && r.cooking_time > 0;
@@ -117,9 +122,10 @@ function RecipeCard({
         <div className="mt-4 flex flex-wrap items-center justify-end gap-2 border-t border-stone-100 pt-3">
           <button
             type="button"
-            className="inline-flex items-center gap-1.5 rounded-lg border border-stone-200 bg-white px-3 py-1.5 text-sm font-medium text-stone-700 shadow-sm transition hover:border-amber-300/80 hover:bg-amber-50/50 hover:text-stone-900"
+            className="inline-flex items-center gap-1.5 rounded-lg border border-stone-200 bg-white px-3 py-1.5 text-sm font-medium text-stone-700 shadow-sm transition hover:border-amber-300/80 hover:bg-amber-50/50 hover:text-stone-900 disabled:pointer-events-none disabled:opacity-50"
             aria-label={`Edit ${r.title || 'recipe'}`}
             title="Edit recipe"
+            disabled={deletePending}
             onClick={(e) => {
               e.preventDefault();
               onEdit();
@@ -137,10 +143,14 @@ function RecipeCard({
           </button>
           <button
             type="button"
-            className="inline-flex items-center gap-1.5 rounded-lg border border-red-200/90 bg-white px-3 py-1.5 text-sm font-medium text-red-700 shadow-sm transition hover:border-red-300 hover:bg-red-50"
+            className="inline-flex items-center gap-1.5 rounded-lg border border-red-200/90 bg-white px-3 py-1.5 text-sm font-medium text-red-700 shadow-sm transition hover:border-red-300 hover:bg-red-50 disabled:pointer-events-none disabled:opacity-50"
             aria-label={`Delete ${r.title || 'recipe'}`}
-            title="Delete (remove from database is not wired up yet)"
-            onClick={(e) => e.preventDefault()}
+            title={r._id ? 'Delete recipe from database' : 'Cannot delete without an id'}
+            disabled={deletePending || !r._id}
+            onClick={(e) => {
+              e.preventDefault();
+              onDelete();
+            }}
           >
             <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden>
               <path
@@ -150,7 +160,7 @@ function RecipeCard({
                 d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"
               />
             </svg>
-            Delete
+            {deletePending ? 'Deleting…' : 'Delete'}
           </button>
         </div>
       </div>
@@ -175,11 +185,17 @@ function ListSkeleton() {
   );
 }
 
-export function BrowseSearchPanel({ reloadKey, onEditRecipe }: BrowseSearchPanelProps) {
+export function BrowseSearchPanel({ reloadKey, onEditRecipe, onRecipeDeleted }: BrowseSearchPanelProps) {
   const [query, setQuery] = useState('');
   const [recipes, setRecipes] = useState<RecipeRecord[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [deleteError, setDeleteError] = useState<string | null>(null);
+  const [deletingId, setDeletingId] = useState<string | null>(null);
+
+  useEffect(() => {
+    setDeleteError(null);
+  }, [reloadKey]);
 
   useEffect(() => {
     let cancelled = false;
@@ -234,6 +250,33 @@ export function BrowseSearchPanel({ reloadKey, onEditRecipe }: BrowseSearchPanel
   }, [recipes, query]);
 
   const searchBusy = loading && recipes.length === 0 && !error;
+
+  async function handleDeleteRecipe(recipe: RecipeRecord) {
+    if (!recipe._id) return;
+    const label = recipe.title?.trim() || 'Untitled';
+    if (
+      !window.confirm(`Delete “${label}”? This removes it from the database and cannot be undone.`)
+    ) {
+      return;
+    }
+    setDeleteError(null);
+    setDeletingId(recipe._id);
+    try {
+      const res = await fetch(`${API_BASE}/recipes/${encodeURIComponent(recipe._id)}`, {
+        method: 'DELETE',
+      });
+      const text = await res.text();
+      if (!res.ok) {
+        setDeleteError(text || `Delete failed (${res.status})`);
+        return;
+      }
+      onRecipeDeleted?.();
+    } catch (e) {
+      setDeleteError(e instanceof Error ? e.message : 'Network error while deleting');
+    } finally {
+      setDeletingId(null);
+    }
+  }
 
   return (
     <div className="space-y-8">
@@ -302,6 +345,16 @@ export function BrowseSearchPanel({ reloadKey, onEditRecipe }: BrowseSearchPanel
         </div>
       )}
 
+      {deleteError && (
+        <div
+          className="rounded-2xl border border-red-200/90 bg-red-50/90 px-4 py-3 text-sm text-red-900 shadow-sm"
+          role="alert"
+        >
+          <p className="font-medium">Couldn’t delete recipe</p>
+          <p className="mt-1 text-red-800/90">{deleteError}</p>
+        </div>
+      )}
+
       {searchBusy ? (
         <ListSkeleton />
       ) : filtered.length === 0 ? (
@@ -329,7 +382,12 @@ export function BrowseSearchPanel({ reloadKey, onEditRecipe }: BrowseSearchPanel
         <ul className="space-y-3">
           {filtered.map((r) => (
             <li key={r._id || r.title}>
-              <RecipeCard recipe={r} onEdit={() => onEditRecipe(r)} />
+              <RecipeCard
+                recipe={r}
+                onEdit={() => onEditRecipe(r)}
+                onDelete={() => handleDeleteRecipe(r)}
+                deletePending={deletingId === r._id}
+              />
             </li>
           ))}
         </ul>
