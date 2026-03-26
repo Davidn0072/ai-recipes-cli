@@ -35,13 +35,11 @@ export function CreateRecipeModal({ open, onClose }: CreateRecipeModalProps) {
   const [form, setForm] = useState<FormState>(emptyForm);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [success, setSuccess] = useState<string | null>(null);
 
   useEffect(() => {
     if (!open) return;
     setForm(emptyForm());
     setError(null);
-    setSuccess(null);
   }, [open]);
 
   useEffect(() => {
@@ -58,7 +56,6 @@ export function CreateRecipeModal({ open, onClose }: CreateRecipeModalProps) {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError(null);
-    setSuccess(null);
     const title = form.title.trim();
     if (!title) {
       setError('Title is required.');
@@ -83,8 +80,7 @@ export function CreateRecipeModal({ open, onClose }: CreateRecipeModalProps) {
         setError(text || `Request failed (${res.status})`);
         return;
       }
-      setSuccess(text || 'Recipe saved.');
-      setForm(emptyForm());
+      onClose();
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Network error');
     } finally {
@@ -215,12 +211,6 @@ export function CreateRecipeModal({ open, onClose }: CreateRecipeModalProps) {
               {error}
             </p>
           )}
-          {success && (
-            <p className="rounded-lg bg-emerald-50 px-3 py-2 text-sm text-emerald-900" role="status">
-              {success}
-            </p>
-          )}
-
           <div className="flex justify-end gap-2 pt-2">
             <button
               type="button"
