@@ -12,6 +12,7 @@ export type RecipeRecord = {
 
 type BrowseSearchPanelProps = {
   reloadKey: number;
+  onEditRecipe: (recipe: RecipeRecord) => void;
 };
 
 function difficultyBadgeClass(difficulty?: string): string {
@@ -54,7 +55,13 @@ function matchesQuery(r: RecipeRecord, q: string): boolean {
   return blob.includes(needle);
 }
 
-function RecipeCard({ recipe: r }: { recipe: RecipeRecord }) {
+function RecipeCard({
+  recipe: r,
+  onEdit,
+}: {
+  recipe: RecipeRecord;
+  onEdit: () => void;
+}) {
   const ingredientsLine = ingredientPreview(r);
   const hasTime = r.cooking_time != null && r.cooking_time > 0;
 
@@ -112,8 +119,11 @@ function RecipeCard({ recipe: r }: { recipe: RecipeRecord }) {
             type="button"
             className="inline-flex items-center gap-1.5 rounded-lg border border-stone-200 bg-white px-3 py-1.5 text-sm font-medium text-stone-700 shadow-sm transition hover:border-amber-300/80 hover:bg-amber-50/50 hover:text-stone-900"
             aria-label={`Edit ${r.title || 'recipe'}`}
-            title="Edit (saving changes is not wired up yet)"
-            onClick={(e) => e.preventDefault()}
+            title="Edit recipe"
+            onClick={(e) => {
+              e.preventDefault();
+              onEdit();
+            }}
           >
             <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden>
               <path
@@ -165,7 +175,7 @@ function ListSkeleton() {
   );
 }
 
-export function BrowseSearchPanel({ reloadKey }: BrowseSearchPanelProps) {
+export function BrowseSearchPanel({ reloadKey, onEditRecipe }: BrowseSearchPanelProps) {
   const [query, setQuery] = useState('');
   const [recipes, setRecipes] = useState<RecipeRecord[]>([]);
   const [loading, setLoading] = useState(true);
@@ -319,7 +329,7 @@ export function BrowseSearchPanel({ reloadKey }: BrowseSearchPanelProps) {
         <ul className="space-y-3">
           {filtered.map((r) => (
             <li key={r._id || r.title}>
-              <RecipeCard recipe={r} />
+              <RecipeCard recipe={r} onEdit={() => onEditRecipe(r)} />
             </li>
           ))}
         </ul>

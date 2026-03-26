@@ -1,10 +1,13 @@
 import { useEffect, useId, useState } from 'react';
 import { API_BASE } from '../api';
+import type { RecipeRecord } from './BrowseSearchPanel';
 
 type CreateRecipeModalProps = {
   open: boolean;
   onClose: () => void;
-  onCreated?: () => void;
+  /** When set, the modal edits this recipe (PATCH). When null, creates a new one (POST). */
+  editingRecipe: RecipeRecord | null;
+  onSuccess?: () => void;
 };
 
 type FormState = {
@@ -23,6 +26,22 @@ const emptyForm = (): FormState => ({
   cooking_time: 0,
 });
 
+function normalizeDifficulty(d?: string): FormState['difficulty'] {
+  const x = d?.toLowerCase();
+  if (x === 'easy' || x === 'medium' || x === 'hard') return x;
+  return 'easy';
+}
+
+function recipeToForm(r: RecipeRecord): FormState {
+  return {
+    title: r.title,
+    ingredientsText: (r.ingredients ?? []).join('\n'),
+    instructions: r.instructions ?? '',
+    difficulty: normalizeDifficulty(r.difficulty),
+    cooking_time: r.cooking_time ?? 0,
+  };
+}
+
 function parseIngredients(text: string): string[] {
   return text
     .split(/\r?\n/)
@@ -30,17 +49,23 @@ function parseIngredients(text: string): string[] {
     .filter(Boolean);
 }
 
-export function CreateRecipeModal({ open, onClose, onCreated }: CreateRecipeModalProps) {
+export function CreateRecipeModal({ open, onClose, editingRecipe, onSuccess }: CreateRecipeModalProps) {
   const titleId = useId();
   const [form, setForm] = useState<FormState>(emptyForm);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
+  const isEdit = Boolean(editingRecipe?._id);
+
   useEffect(() => {
     if (!open) return;
-    setForm(emptyForm());
     setError(null);
-  }, [open]);
+    if (editingRecipe) {
+      setForm(recipeToForm(editingRecipe));
+    } else {
+      setForm(emptyForm());
+    }
+  }, [open, editingRecipe]);
 
   useEffect(() => {
     if (!open) return;
@@ -61,26 +86,35 @@ export function CreateRecipeModal({ open, onClose, onCreated }: CreateRecipeModa
       setError('Title is required.');
       return;
     }
+    if (isEdit && !editingRecipe?._id) {
+      setError('Cannot update: missing recipe id.');
+      return;
+    }
     const ingredients = parseIngredients(form.ingredientsText);
+    const payload = {
+      title,
+      ingredients,
+      instructions: form.instructions.trim(),
+      difficulty: form.difficulty,
+      cooking_time: Number.isFinite(form.cooking_time) ? form.cooking_time : 0,
+    };
     setSubmitting(true);
     try {
-      const res = await fetch(`${API_BASE}/recipes`, {
-        method: 'POST',
+      const recipeId = editingRecipe?._id ?? '';
+      const url = isEdit
+        ? `${API_BASE}/recipes/${encodeURIComponent(recipeId)}`
+        : `${API_BASE}/recipes`;
+      const res = await fetch(url, {
+        method: isEdit ? 'PATCH' : 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          title,
-          ingredients,
-          instructions: form.instructions.trim(),
-          difficulty: form.difficulty,
-          cooking_time: Number.isFinite(form.cooking_time) ? form.cooking_time : 0,
-        }),
+        body: JSON.stringify(payload),
       });
       const text = await res.text();
       if (!res.ok) {
         setError(text || `Request failed (${res.status})`);
         return;
       }
-      onCreated?.();
+      onSuccess?.();
       onClose();
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Network error');
@@ -107,7 +141,7 @@ export function CreateRecipeModal({ open, onClose, onCreated }: CreateRecipeModa
       >
         <div className="flex items-start justify-between gap-4">
           <h2 id={titleId} className="font-serif text-xl font-medium text-stone-900">
-            New recipe
+            {isEdit ? 'Edit recipe' : 'New recipe'}
           </h2>
           <button
             type="button"
@@ -226,7 +260,7 @@ export function CreateRecipeModal({ open, onClose, onCreated }: CreateRecipeModa
               className="rounded-lg bg-amber-600 px-4 py-2 text-sm font-medium text-white hover:bg-amber-700 disabled:opacity-50"
               disabled={submitting}
             >
-              {submitting ? 'Saving…' : 'Save recipe'}
+              {submitting ? 'Saving…' : isEdit ? 'Update recipe' : 'Save recipe'}
             </button>
           </div>
         </form>

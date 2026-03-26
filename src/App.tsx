@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { BrowseSearchPanel } from './components/BrowseSearchPanel';
+import { BrowseSearchPanel, type RecipeRecord } from './components/BrowseSearchPanel';
 import { CreateRecipeModal } from './components/CreateRecipeModal';
 import { Sidebar, type SidebarView } from './components/Sidebar';
 
@@ -26,26 +26,44 @@ function AboutPanel() {
 
 function App() {
   const [view, setView] = useState<SidebarView>('browse');
-  const [createRecipeOpen, setCreateRecipeOpen] = useState(false);
+  const [recipeModalOpen, setRecipeModalOpen] = useState(false);
+  const [editingRecipe, setEditingRecipe] = useState<RecipeRecord | null>(null);
   const [recipeListKey, setRecipeListKey] = useState(0);
+
+  const closeRecipeModal = () => {
+    setRecipeModalOpen(false);
+    setEditingRecipe(null);
+  };
 
   return (
     <div className="flex h-screen min-h-0 bg-stone-100 text-stone-900">
       <Sidebar
         active={view}
         onSelect={setView}
-        onNewRecipe={() => setCreateRecipeOpen(true)}
+        onNewRecipe={() => {
+          setEditingRecipe(null);
+          setRecipeModalOpen(true);
+        }}
       />
       <main className="min-h-0 min-w-0 flex-1 overflow-auto py-6 pl-6 pr-6 md:py-8 md:pl-8 md:pr-10">
         <div className="w-full max-w-2xl">
-          {view === 'browse' && <BrowseSearchPanel reloadKey={recipeListKey} />}
+          {view === 'browse' && (
+            <BrowseSearchPanel
+              reloadKey={recipeListKey}
+              onEditRecipe={(recipe) => {
+                setEditingRecipe(recipe);
+                setRecipeModalOpen(true);
+              }}
+            />
+          )}
           {view === 'about' && <AboutPanel />}
         </div>
       </main>
       <CreateRecipeModal
-        open={createRecipeOpen}
-        onClose={() => setCreateRecipeOpen(false)}
-        onCreated={() => setRecipeListKey((k) => k + 1)}
+        open={recipeModalOpen}
+        editingRecipe={editingRecipe}
+        onClose={closeRecipeModal}
+        onSuccess={() => setRecipeListKey((k) => k + 1)}
       />
     </div>
   );
