@@ -1,4 +1,4 @@
-import { useEffect, useId, useState } from 'react';
+import { useEffect, useId, useRef, useState } from 'react';
 import { API_BASE } from '../api';
 import type { RecipeRecord } from './BrowseSearchPanel';
 
@@ -26,6 +26,15 @@ const emptyForm = (): FormState => ({
   cooking_time: 0,
 });
 
+/** Sample data so an empty “New recipe” form is easier to start from */
+const EXAMPLE_FORM: FormState = {
+  title: 'Quick tomato pasta',
+  ingredientsText: 'spaghetti\nolive oil\ngarlic\ncanned tomatoes\nfresh basil',
+  instructions: '',
+  difficulty: 'easy',
+  cooking_time: 25,
+};
+
 function normalizeDifficulty(d?: string): FormState['difficulty'] {
   const x = d?.toLowerCase();
   if (x === 'easy' || x === 'medium' || x === 'hard') return x;
@@ -51,6 +60,7 @@ function parseIngredients(text: string): string[] {
 
 export function CreateRecipeModal({ open, onClose, editingRecipe, onSuccess }: CreateRecipeModalProps) {
   const titleId = useId();
+  const titleInputRef = useRef<HTMLInputElement>(null);
   const [form, setForm] = useState<FormState>(emptyForm);
   const [submitting, setSubmitting] = useState(false);
   const [aiLoading, setAiLoading] = useState(false);
@@ -76,6 +86,12 @@ export function CreateRecipeModal({ open, onClose, editingRecipe, onSuccess }: C
     window.addEventListener('keydown', onKey);
     return () => window.removeEventListener('keydown', onKey);
   }, [open, onClose]);
+
+  useEffect(() => {
+    if (!open || isEdit) return;
+    const id = window.setTimeout(() => titleInputRef.current?.focus(), 0);
+    return () => window.clearTimeout(id);
+  }, [open, isEdit]);
 
   if (!open) return null;
 
@@ -202,17 +218,58 @@ export function CreateRecipeModal({ open, onClose, editingRecipe, onSuccess }: C
           </button>
         </div>
 
+        {isEdit ? (
+          <p className="mt-3 text-sm leading-relaxed text-stone-600">
+            Update title, ingredients, or instructions. Only the title is required to save.
+          </p>
+        ) : (
+          <>
+            <p className="mt-3 text-sm leading-relaxed text-stone-600">
+              Start with a <strong className="font-medium text-stone-800">title</strong> (required to save).
+              Ingredients and instructions are optional—add ingredients, then use{' '}
+              <span className="whitespace-nowrap font-medium text-violet-900">Get instructions by AI</span> or type
+              steps yourself.
+            </p>
+            <div className="mt-3 flex flex-wrap gap-2">
+              <button
+                type="button"
+                onClick={() => {
+                  setError(null);
+                  setForm(EXAMPLE_FORM);
+                }}
+                disabled={submitting || aiLoading}
+                className="rounded-lg border border-stone-200 bg-stone-50 px-3 py-1.5 text-xs font-medium text-stone-800 shadow-sm transition hover:bg-stone-100 disabled:pointer-events-none disabled:opacity-50"
+              >
+                Fill with example
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  setError(null);
+                  setForm(emptyForm());
+                }}
+                disabled={submitting || aiLoading}
+                className="rounded-lg border border-stone-200 bg-white px-3 py-1.5 text-xs font-medium text-stone-600 shadow-sm transition hover:bg-stone-50 disabled:pointer-events-none disabled:opacity-50"
+              >
+                Clear form
+              </button>
+            </div>
+          </>
+        )}
+
         <form onSubmit={handleSubmit} className="mt-6 space-y-4">
           <div>
             <label htmlFor="recipe-title" className="block text-sm font-medium text-stone-700">
               Title <span className="text-red-600">*</span>
             </label>
             <input
+              ref={titleInputRef}
               id="recipe-title"
               type="text"
               value={form.title}
               onChange={(e) => setForm((f) => ({ ...f, title: e.target.value }))}
-              className="mt-1 w-full rounded-lg border border-stone-200 px-3 py-2 text-stone-900 shadow-sm focus:border-amber-500/60 focus:outline-none focus:ring-2 focus:ring-amber-500/25"
+              placeholder="e.g. Lemon-roast chicken"
+              className="mt-1 w-full rounded-lg border border-stone-200 px-3 py-2 text-stone-900 shadow-sm placeholder:text-stone-400 focus:border-amber-500/60 focus:outline-none focus:ring-2 focus:ring-amber-500/25"
               autoComplete="off"
               disabled={submitting || aiLoading}
             />
@@ -222,13 +279,14 @@ export function CreateRecipeModal({ open, onClose, editingRecipe, onSuccess }: C
             <label htmlFor="recipe-ingredients" className="block text-sm font-medium text-stone-700">
               Ingredients
             </label>
-            <p className="mt-0.5 text-xs text-stone-500">One ingredient per line</p>
+            <p className="mt-0.5 text-xs text-stone-500">One ingredient per line (optional)</p>
             <textarea
               id="recipe-ingredients"
               value={form.ingredientsText}
               onChange={(e) => setForm((f) => ({ ...f, ingredientsText: e.target.value }))}
               rows={4}
-              className="mt-1 w-full rounded-lg border border-stone-200 px-3 py-2 text-stone-900 shadow-sm focus:border-amber-500/60 focus:outline-none focus:ring-2 focus:ring-amber-500/25"
+              placeholder={'e.g.\nchicken thighs\nlemon\ngarlic\nolive oil'}
+              className="mt-1 w-full rounded-lg border border-stone-200 px-3 py-2 text-stone-900 shadow-sm placeholder:text-stone-400 focus:border-amber-500/60 focus:outline-none focus:ring-2 focus:ring-amber-500/25"
               disabled={submitting || aiLoading}
             />
           </div>
@@ -264,12 +322,16 @@ export function CreateRecipeModal({ open, onClose, editingRecipe, onSuccess }: C
                 )}
               </button>
             </div>
+            <p className="mt-1.5 text-xs text-stone-500">
+              Requires a title. Adding ingredients improves the AI result.
+            </p>
             <textarea
               id="recipe-instructions"
               value={form.instructions}
               onChange={(e) => setForm((f) => ({ ...f, instructions: e.target.value }))}
               rows={4}
-              className="mt-1 w-full rounded-lg border border-stone-200 px-3 py-2 text-stone-900 shadow-sm focus:border-amber-500/60 focus:outline-none focus:ring-2 focus:ring-amber-500/25"
+              placeholder="e.g. Heat oven to 400°F. Season chicken, roast 35 min until golden… (optional)"
+              className="mt-1 w-full rounded-lg border border-stone-200 px-3 py-2 text-stone-900 shadow-sm placeholder:text-stone-400 focus:border-amber-500/60 focus:outline-none focus:ring-2 focus:ring-amber-500/25"
               disabled={submitting || aiLoading}
             />
           </div>
