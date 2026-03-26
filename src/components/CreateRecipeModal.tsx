@@ -1,10 +1,10 @@
 import { useEffect, useId, useState } from 'react';
-
-const API_BASE = import.meta.env.VITE_API_URL ?? 'http://localhost:3000';
+import { API_BASE } from '../api';
 
 type CreateRecipeModalProps = {
   open: boolean;
   onClose: () => void;
+  onCreated?: () => void;
 };
 
 type FormState = {
@@ -30,7 +30,7 @@ function parseIngredients(text: string): string[] {
     .filter(Boolean);
 }
 
-export function CreateRecipeModal({ open, onClose }: CreateRecipeModalProps) {
+export function CreateRecipeModal({ open, onClose, onCreated }: CreateRecipeModalProps) {
   const titleId = useId();
   const [form, setForm] = useState<FormState>(emptyForm);
   const [submitting, setSubmitting] = useState(false);
@@ -80,6 +80,7 @@ export function CreateRecipeModal({ open, onClose }: CreateRecipeModalProps) {
         setError(text || `Request failed (${res.status})`);
         return;
       }
+      onCreated?.();
       onClose();
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Network error');

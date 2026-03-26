@@ -1,81 +1,7 @@
-import { useMemo, useState } from 'react';
+import { useState } from 'react';
+import { BrowseSearchPanel } from './components/BrowseSearchPanel';
 import { CreateRecipeModal } from './components/CreateRecipeModal';
 import { Sidebar, type SidebarView } from './components/Sidebar';
-
-function BrowseSearchPanel() {
-  const [query, setQuery] = useState('');
-
-  const filtered = useMemo(() => {
-    const sample = [
-      { id: '1', title: 'Tomato basil soup', tags: 'Soup · Vegetarian' },
-      { id: '2', title: 'Lemon roast chicken', tags: 'Main · Comfort' },
-      { id: '3', title: 'Chocolate olive oil cake', tags: 'Dessert · Baking' },
-    ];
-    const q = query.trim().toLowerCase();
-    if (!q) return sample;
-    return sample.filter(
-      (r) =>
-        r.title.toLowerCase().includes(q) ||
-        r.tags.toLowerCase().includes(q)
-    );
-  }, [query]);
-
-  return (
-    <div className="space-y-6">
-      <div>
-        <h2 className="font-serif text-2xl font-medium text-stone-900">
-          Browse & search
-        </h2>
-        <p className="mt-1 text-sm text-stone-600">
-          See every recipe or narrow the list with a quick search.
-        </p>
-      </div>
-      <div className="relative">
-        <label htmlFor="recipe-search" className="sr-only">
-          Search recipes
-        </label>
-        <span
-          className="pointer-events-none absolute inset-y-0 left-3 flex items-center text-stone-400"
-          aria-hidden
-        >
-          <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-            <path
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              strokeWidth={2}
-              d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"
-            />
-          </svg>
-        </span>
-        <input
-          id="recipe-search"
-          type="search"
-          value={query}
-          onChange={(e) => setQuery(e.target.value)}
-          placeholder="Search by title or tag…"
-          className="w-full rounded-xl border border-stone-200 bg-white py-3 pl-11 pr-4 text-stone-900 shadow-sm placeholder:text-stone-400 focus:border-amber-500/60 focus:outline-none focus:ring-2 focus:ring-amber-500/25"
-        />
-      </div>
-      <ul className="divide-y divide-stone-200 rounded-xl border border-stone-200 bg-white shadow-sm">
-        {filtered.length === 0 ? (
-          <li className="px-4 py-8 text-center text-sm text-stone-500">
-            No recipes match “{query.trim()}”. Try another word.
-          </li>
-        ) : (
-          filtered.map((r) => (
-            <li
-              key={r.id}
-              className="flex flex-col gap-0.5 px-4 py-4 first:rounded-t-xl last:rounded-b-xl hover:bg-stone-50/80"
-            >
-              <span className="font-medium text-stone-900">{r.title}</span>
-              <span className="text-xs text-stone-500">{r.tags}</span>
-            </li>
-          ))
-        )}
-      </ul>
-    </div>
-  );
-}
 
 function AboutPanel() {
   return (
@@ -90,8 +16,8 @@ function AboutPanel() {
       </div>
       <div className="rounded-xl border border-stone-200 bg-white p-6 shadow-sm">
         <p className="text-sm leading-relaxed text-stone-700">
-          Use the sidebar to browse and search recipes, add new ones, or read
-          this page. This build is frontend-only; no server calls are made.
+          Use the sidebar to browse recipes from the API, add new ones, or read
+          this page.
         </p>
       </div>
     </div>
@@ -101,6 +27,7 @@ function AboutPanel() {
 function App() {
   const [view, setView] = useState<SidebarView>('browse');
   const [createRecipeOpen, setCreateRecipeOpen] = useState(false);
+  const [recipeListKey, setRecipeListKey] = useState(0);
 
   return (
     <div className="flex h-screen min-h-0 bg-stone-100 text-stone-900">
@@ -111,11 +38,15 @@ function App() {
       />
       <main className="min-h-0 min-w-0 flex-1 overflow-auto py-6 pl-6 pr-6 md:py-8 md:pl-8 md:pr-10">
         <div className="w-full max-w-2xl">
-          {view === 'browse' && <BrowseSearchPanel />}
+          {view === 'browse' && <BrowseSearchPanel reloadKey={recipeListKey} />}
           {view === 'about' && <AboutPanel />}
         </div>
       </main>
-      <CreateRecipeModal open={createRecipeOpen} onClose={() => setCreateRecipeOpen(false)} />
+      <CreateRecipeModal
+        open={createRecipeOpen}
+        onClose={() => setCreateRecipeOpen(false)}
+        onCreated={() => setRecipeListKey((k) => k + 1)}
+      />
     </div>
   );
 }
