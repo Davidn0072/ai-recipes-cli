@@ -41,19 +41,11 @@ function ingredientPreview(r: RecipeRecord): string | null {
   return ing.length > 4 ? `${text}…` : text;
 }
 
-function matchesQuery(r: RecipeRecord, q: string): boolean {
+/** Client-side filter: substring match on recipe title only (case-insensitive). */
+function titleMatchesSearch(r: RecipeRecord, q: string): boolean {
   const needle = q.trim().toLowerCase();
   if (!needle) return true;
-  const blob = [
-    r.title,
-    ...(r.ingredients ?? []),
-    r.instructions ?? '',
-    r.difficulty ?? '',
-    String(r.cooking_time ?? ''),
-  ]
-    .join(' ')
-    .toLowerCase();
-  return blob.includes(needle);
+  return (r.title || '').toLowerCase().includes(needle);
 }
 
 function RecipeCard({
@@ -246,7 +238,7 @@ export function BrowseSearchPanel({ reloadKey, onEditRecipe, onRecipeDeleted }: 
   }, [reloadKey]);
 
   const filtered = useMemo(() => {
-    return recipes.filter((r) => matchesQuery(r, query));
+    return recipes.filter((r) => titleMatchesSearch(r, query));
   }, [recipes, query]);
 
   const searchBusy = loading && recipes.length === 0 && !error;
@@ -288,8 +280,7 @@ export function BrowseSearchPanel({ reloadKey, onEditRecipe, onRecipeDeleted }: 
           Browse & search
         </h2>
         <p className="mt-2 max-w-lg text-sm leading-relaxed text-stone-600">
-          Every recipe from the server in one place. Search by name, ingredient, or anything in the
-          instructions.
+          Every recipe from the server in one place. Search matches the recipe title only.
         </p>
       </header>
 
@@ -315,7 +306,7 @@ export function BrowseSearchPanel({ reloadKey, onEditRecipe, onRecipeDeleted }: 
           type="search"
           value={query}
           onChange={(e) => setQuery(e.target.value)}
-          placeholder="Search recipes…"
+          placeholder="Search by title…"
           disabled={searchBusy}
           className="w-full rounded-2xl border border-stone-200/90 bg-white py-3.5 pl-12 pr-4 text-stone-900 shadow-sm placeholder:text-stone-400 transition focus:border-amber-400/80 focus:outline-none focus:ring-4 focus:ring-amber-500/15 disabled:opacity-60"
         />
@@ -374,7 +365,7 @@ export function BrowseSearchPanel({ reloadKey, onEditRecipe, onRecipeDeleted }: 
           </p>
           <p className="mt-2 text-sm text-stone-600">
             {query.trim()
-              ? `Nothing matches “${query.trim()}”. Try different words.`
+              ? `No recipe title contains “${query.trim()}”. Try another title search.`
               : 'Add your first recipe with “New recipe” in the sidebar.'}
           </p>
         </div>
