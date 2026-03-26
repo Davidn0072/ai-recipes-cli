@@ -122,8 +122,8 @@ function App() {
   return (
     <div className="flex h-screen min-h-0 bg-stone-100 text-stone-900">
       <Sidebar active={view} onSelect={setView} />
-      <main className="min-h-0 min-w-0 flex-1 overflow-auto p-8 md:p-10">
-        <div className="mx-auto max-w-2xl">
+      <main className="min-h-0 min-w-0 flex-1 overflow-auto py-6 pl-6 pr-6 md:py-8 md:pl-8 md:pr-10">
+        <div className="w-full max-w-2xl">
           {view === 'browse' && <BrowseSearchPanel />}
           {view === 'new-recipe' && <NewRecipePanel />}
           {view === 'about' && <AboutPanel />}
