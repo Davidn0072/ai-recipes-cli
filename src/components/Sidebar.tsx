@@ -6,18 +6,50 @@ type SidebarProps = {
   onNewRecipe: () => void;
 };
 
-const pageNavItems: { id: SidebarView; label: string; description: string }[] = [
-  {
-    id: 'browse',
-    label: 'Browse & search',
-    description: 'See all recipes and filter by name',
-  },
-  {
-    id: 'about',
-    label: 'About',
-    description: 'App info and credits',
-  },
-];
+const browseNav: { id: SidebarView; label: string; description: string } = {
+  id: 'browse',
+  label: 'Browse & search',
+  description: 'See all recipes and filter by name',
+};
+
+const aboutNav: { id: SidebarView; label: string; description: string } = {
+  id: 'about',
+  label: 'About',
+  description: 'App info and credits',
+};
+
+function PageNavButton({
+  item,
+  active,
+  onSelect,
+}: {
+  item: { id: SidebarView; label: string; description: string };
+  active: SidebarView;
+  onSelect: (view: SidebarView) => void;
+}) {
+  const isActive = active === item.id;
+  return (
+    <button
+      type="button"
+      onClick={() => onSelect(item.id)}
+      className={`group rounded-lg px-3 py-3 text-left transition-colors ${
+        isActive
+          ? 'bg-amber-500/15 text-amber-100 ring-1 ring-amber-500/40'
+          : 'text-stone-300 hover:bg-stone-900 hover:text-stone-50'
+      }`}
+      aria-current={isActive ? 'page' : undefined}
+    >
+      <span className="block font-medium">{item.label}</span>
+      <span
+        className={`mt-0.5 block text-xs ${
+          isActive ? 'text-amber-200/80' : 'text-stone-500 group-hover:text-stone-400'
+        }`}
+      >
+        {item.description}
+      </span>
+    </button>
+  );
+}
 
 export function Sidebar({ active, onSelect, onNewRecipe }: SidebarProps) {
   return (
@@ -34,31 +66,7 @@ export function Sidebar({ active, onSelect, onNewRecipe }: SidebarProps) {
         </h1>
       </div>
       <nav className="flex flex-1 flex-col gap-1 p-3">
-        {pageNavItems.map((item) => {
-          const isActive = active === item.id;
-          return (
-            <button
-              key={item.id}
-              type="button"
-              onClick={() => onSelect(item.id)}
-              className={`group rounded-lg px-3 py-3 text-left transition-colors ${
-                isActive
-                  ? 'bg-amber-500/15 text-amber-100 ring-1 ring-amber-500/40'
-                  : 'text-stone-300 hover:bg-stone-900 hover:text-stone-50'
-              }`}
-              aria-current={isActive ? 'page' : undefined}
-            >
-              <span className="block font-medium">{item.label}</span>
-              <span
-                className={`mt-0.5 block text-xs ${
-                  isActive ? 'text-amber-200/80' : 'text-stone-500 group-hover:text-stone-400'
-                }`}
-              >
-                {item.description}
-              </span>
-            </button>
-          );
-        })}
+        <PageNavButton item={browseNav} active={active} onSelect={onSelect} />
         <button
           type="button"
           onClick={onNewRecipe}
@@ -69,6 +77,7 @@ export function Sidebar({ active, onSelect, onNewRecipe }: SidebarProps) {
             Add a recipe in a new window
           </span>
         </button>
+        <PageNavButton item={aboutNav} active={active} onSelect={onSelect} />
       </nav>
     </aside>
   );
