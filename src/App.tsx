@@ -1,7 +1,35 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
+import {
+  Outlet,
+  Route,
+  Routes,
+  useMatch,
+  useNavigate,
+  useOutletContext,
+} from 'react-router-dom';
+import { API_BASE } from './api';
 import { BrowseSearchPanel, type RecipeRecord } from './components/BrowseSearchPanel';
 import { CreateRecipeModal } from './components/CreateRecipeModal';
-import { Sidebar, type SidebarView } from './components/Sidebar';
+import { Sidebar } from './components/Sidebar';
+
+export type LayoutOutletContext = {
+  reloadKey: number;
+  onRecipeDeleted: () => void;
+};
+
+function mapApiToRecipe(o: Record<string, unknown>): RecipeRecord {
+  const id = o._id != null ? String(o._id) : '';
+  return {
+    _id: id,
+    title: typeof o.title === 'string' ? o.title : '',
+    ingredients: Array.isArray(o.ingredients)
+      ? o.ingredients.filter((x): x is string => typeof x === 'string')
+      : [],
+    instructions: typeof o.instructions === 'string' ? o.instructions : undefined,
+    difficulty: typeof o.difficulty === 'string' ? o.difficulty : undefined,
+    cooking_time: typeof o.cooking_time === 'number' ? o.cooking_time : undefined,
+  };
+}
 
 function AboutPanel() {
   return (
@@ -68,50 +96,96 @@ function AboutPanel() {
   );
 }
 
-function App() {
-  const [view, setView] = useState<SidebarView>('browse');
-  const [recipeModalOpen, setRecipeModalOpen] = useState(false);
+function BrowseSearchOutlet() {
+  const { reloadKey, onRecipeDeleted } = useOutletContext<LayoutOutletContext>();
+  const navigate = useNavigate();
+  return (
+    <BrowseSearchPanel
+      reloadKey={reloadKey}
+      onEditRecipe={(recipe) => navigate(`/recipes/${recipe._id}/edit`)}
+      onRecipeDeleted={onRecipeDeleted}
+    />
+  );
+}
+
+function AppLayout() {
+  const navigate = useNavigate();
+  const matchNew = useMatch('/recipes/new');
+  const matchEdit = useMatch('/recipes/:recipeId/edit');
+  const recipeId = matchEdit?.params.recipeId;
+
   const [editingRecipe, setEditingRecipe] = useState<RecipeRecord | null>(null);
   const [recipeListKey, setRecipeListKey] = useState(0);
 
-  const closeRecipeModal = () => {
-    setRecipeModalOpen(false);
+  useEffect(() => {
+    if (!recipeId) {
+      setEditingRecipe(null);
+      return;
+    }
     setEditingRecipe(null);
+    let cancelled = false;
+    (async () => {
+      try {
+        const res = await fetch(`${API_BASE}/recipes/${encodeURIComponent(recipeId)}`);
+        if (!res.ok) throw new Error('not found');
+        const data: unknown = await res.json();
+        if (cancelled) return;
+        if (!data || typeof data !== 'object') throw new Error('bad response');
+        setEditingRecipe(mapApiToRecipe(data as Record<string, unknown>));
+      } catch {
+        if (!cancelled) navigate('/', { replace: true });
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [recipeId, navigate]);
+
+  const modalOpen = Boolean(matchNew || (matchEdit && editingRecipe));
+
+  const closeModal = () => {
+    navigate('/');
+  };
+
+  const onSuccess = () => {
+    setRecipeListKey((k) => k + 1);
+    navigate('/');
   };
 
   return (
     <div className="flex h-screen min-h-0 bg-stone-100 text-stone-900">
-      <Sidebar
-        active={view}
-        onSelect={setView}
-        onNewRecipe={() => {
-          setEditingRecipe(null);
-          setRecipeModalOpen(true);
-        }}
-      />
+      <Sidebar />
       <main className="min-h-0 min-w-0 flex-1 overflow-auto py-6 pl-6 pr-6 md:py-8 md:pl-8 md:pr-10">
         <div className="w-full max-w-2xl">
-          {view === 'browse' && (
-            <BrowseSearchPanel
-              reloadKey={recipeListKey}
-              onEditRecipe={(recipe) => {
-                setEditingRecipe(recipe);
-                setRecipeModalOpen(true);
-              }}
-              onRecipeDeleted={() => setRecipeListKey((k) => k + 1)}
-            />
-          )}
-          {view === 'about' && <AboutPanel />}
+          <Outlet
+            context={
+              {
+                reloadKey: recipeListKey,
+                onRecipeDeleted: () => setRecipeListKey((k) => k + 1),
+              } satisfies LayoutOutletContext
+            }
+          />
         </div>
       </main>
       <CreateRecipeModal
-        open={recipeModalOpen}
-        editingRecipe={editingRecipe}
-        onClose={closeRecipeModal}
-        onSuccess={() => setRecipeListKey((k) => k + 1)}
+        open={modalOpen}
+        editingRecipe={matchNew ? null : editingRecipe}
+        onClose={closeModal}
+        onSuccess={onSuccess}
       />
     </div>
   );
 }
 
-export default App;
+export default function App() {
+  return (
+    <Routes>
+      <Route path="/" element={<AppLayout />}>
+        <Route index element={<BrowseSearchOutlet />} />
+        <Route path="about" element={<AboutPanel />} />
+        <Route path="recipes/new" element={<BrowseSearchOutlet />} />
+        <Route path="recipes/:recipeId/edit" element={<BrowseSearchOutlet />} />
+      </Route>
+    </Routes>
+  );
+}
