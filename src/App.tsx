@@ -1,11 +1,14 @@
 import { useEffect, useState } from 'react';
 import {
+  Navigate,
   Outlet,
   Route,
   Routes,
+  useLocation,
   useMatch,
   useNavigate,
   useOutletContext,
+  useSearchParams,
 } from 'react-router-dom';
 import { API_BASE } from './api';
 import { BrowseSearchPanel, type RecipeRecord } from './components/BrowseSearchPanel';
@@ -99,17 +102,28 @@ function AboutPanel() {
 function BrowseSearchOutlet() {
   const { reloadKey, onRecipeDeleted } = useOutletContext<LayoutOutletContext>();
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
   return (
     <BrowseSearchPanel
       reloadKey={reloadKey}
-      onEditRecipe={(recipe) => navigate(`/recipes/${recipe._id}/edit`)}
+      onEditRecipe={(recipe) => {
+        const qs = searchParams.toString();
+        navigate(`/recipes/${recipe._id}/edit${qs ? `?${qs}` : ''}`);
+      }}
       onRecipeDeleted={onRecipeDeleted}
     />
   );
 }
 
+/** Maps `/search?q=…` to `/?q=…` so both URL styles work. */
+function SearchToHomeRedirect() {
+  const { search } = useLocation();
+  return <Navigate to={{ pathname: '/', search }} replace />;
+}
+
 function AppLayout() {
   const navigate = useNavigate();
+  const location = useLocation();
   const matchNew = useMatch('/recipes/new');
   const matchEdit = useMatch('/recipes/:recipeId/edit');
   const recipeId = matchEdit?.params.recipeId;
@@ -133,7 +147,9 @@ function AppLayout() {
         if (!data || typeof data !== 'object') throw new Error('bad response');
         setEditingRecipe(mapApiToRecipe(data as Record<string, unknown>));
       } catch {
-        if (!cancelled) navigate('/', { replace: true });
+        if (!cancelled) {
+          navigate({ pathname: '/', search: window.location.search }, { replace: true });
+        }
       }
     })();
     return () => {
@@ -144,12 +160,12 @@ function AppLayout() {
   const modalOpen = Boolean(matchNew || (matchEdit && editingRecipe));
 
   const closeModal = () => {
-    navigate('/');
+    navigate({ pathname: '/', search: location.search });
   };
 
   const onSuccess = () => {
     setRecipeListKey((k) => k + 1);
-    navigate('/');
+    navigate({ pathname: '/', search: location.search });
   };
 
   return (
@@ -182,6 +198,7 @@ export default function App() {
     <Routes>
       <Route path="/" element={<AppLayout />}>
         <Route index element={<BrowseSearchOutlet />} />
+        <Route path="search" element={<SearchToHomeRedirect />} />
         <Route path="about" element={<AboutPanel />} />
         <Route path="recipes/new" element={<BrowseSearchOutlet />} />
         <Route path="recipes/:recipeId/edit" element={<BrowseSearchOutlet />} />

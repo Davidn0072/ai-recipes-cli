@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import { API_BASE } from '../api';
 
 export type RecipeRecord = {
@@ -178,7 +179,8 @@ function ListSkeleton() {
 }
 
 export function BrowseSearchPanel({ reloadKey, onEditRecipe, onRecipeDeleted }: BrowseSearchPanelProps) {
-  const [query, setQuery] = useState('');
+  const [searchParams, setSearchParams] = useSearchParams();
+  const query = searchParams.get('q') ?? '';
   const [recipes, setRecipes] = useState<RecipeRecord[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -280,7 +282,9 @@ export function BrowseSearchPanel({ reloadKey, onEditRecipe, onRecipeDeleted }: 
           Browse & search
         </h2>
         <p className="mt-2 max-w-lg text-sm leading-relaxed text-stone-600">
-          Every recipe from the server in one place. Search matches the recipe title only.
+          Every recipe from the server in one place. Search matches the recipe title only. The filter is stored
+          in the URL as <code className="rounded bg-stone-100 px-1 py-0.5 font-mono text-[0.8rem]">?q=…</code> so
+          you can refresh or share a link.
         </p>
       </header>
 
@@ -305,7 +309,18 @@ export function BrowseSearchPanel({ reloadKey, onEditRecipe, onRecipeDeleted }: 
           id="recipe-search"
           type="search"
           value={query}
-          onChange={(e) => setQuery(e.target.value)}
+          onChange={(e) => {
+            const v = e.target.value;
+            setSearchParams(
+              (prev) => {
+                const next = new URLSearchParams(prev);
+                if (v) next.set('q', v);
+                else next.delete('q');
+                return next;
+              },
+              { replace: true }
+            );
+          }}
           placeholder="Search by title…"
           disabled={searchBusy}
           className="w-full rounded-2xl border border-stone-200/90 bg-white py-3.5 pl-12 pr-4 text-stone-900 shadow-sm placeholder:text-stone-400 transition focus:border-amber-400/80 focus:outline-none focus:ring-4 focus:ring-amber-500/15 disabled:opacity-60"
