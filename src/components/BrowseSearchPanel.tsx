@@ -42,8 +42,8 @@ function ingredientPreview(r: RecipeRecord): string | null {
   return ing.length > 4 ? `${text}…` : text;
 }
 
-/** First 100 characters of instructions; if longer, append "...". */
-const INSTRUCTION_PREVIEW_MAX_CHARS = 100;
+/** First N characters of instructions; if longer, append "...". */
+const INSTRUCTION_PREVIEW_MAX_CHARS = 80;
 
 function recipeDescriptionPreview(instructions?: string): string | null {
   if (instructions == null) return null;
@@ -112,26 +112,60 @@ function RecipeCard({
           </div>
         ) : null}
 
-        <div className="mt-3 space-y-3">
-          <div className="rounded-lg bg-stone-50/80 px-2.5 py-2 ring-1 ring-stone-100">
-            <p className="text-[0.65rem] font-semibold uppercase tracking-wide text-stone-500">Ingredients</p>
-            <p className="mt-1 text-sm leading-snug text-stone-700">
-              {ingredientsLine ? (
-                ingredientsLine
-              ) : (
-                <span className="italic text-stone-400">No ingredients listed</span>
-              )}
-            </p>
-          </div>
-          <div className="rounded-lg bg-stone-50/80 px-2.5 py-2 ring-1 ring-stone-100">
-            <p className="text-[0.65rem] font-semibold uppercase tracking-wide text-stone-500">Instructions</p>
-            <p className="mt-1 break-words text-sm leading-relaxed text-stone-800">
-              {descriptionLine ? (
-                descriptionLine
-              ) : (
-                <span className="italic text-stone-400">No instructions</span>
-              )}
-            </p>
+        <div className="mt-3 overflow-hidden rounded-xl border border-stone-200/90 bg-gradient-to-b from-stone-50/70 to-white shadow-[inset_0_1px_0_0_rgba(255,255,255,0.9)] ring-1 ring-stone-950/[0.04]">
+          <div className="divide-y divide-stone-100/90">
+            <div className="flex gap-3.5 p-3.5 sm:p-4">
+              <div
+                className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-amber-100 to-amber-50 text-amber-800 shadow-sm ring-1 ring-amber-200/50"
+                aria-hidden
+              >
+                <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.75}>
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    d="M8.25 6.75h12M8.25 12h12m-12 5.25h12M4.125 6.75h.008v.008H4.125V6.75zm0 5.25h.008v.008H4.125v-.008zm0 5.25h.008v.008H4.125v-.008z"
+                  />
+                </svg>
+              </div>
+              <div className="min-w-0 flex-1 pt-0.5">
+                <p className="text-[0.7rem] font-semibold uppercase tracking-[0.08em] text-stone-500">
+                  Ingredients
+                </p>
+                <p className="mt-1.5 text-[0.9375rem] leading-relaxed text-stone-800">
+                  {ingredientsLine ? (
+                    <span className="text-stone-700">{ingredientsLine}</span>
+                  ) : (
+                    <span className="italic text-stone-400">No ingredients listed</span>
+                  )}
+                </p>
+              </div>
+            </div>
+            <div className="flex gap-3.5 p-3.5 sm:p-4">
+              <div
+                className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-teal-50 to-emerald-50/80 text-teal-800 shadow-sm ring-1 ring-teal-200/45"
+                aria-hidden
+              >
+                <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.75}>
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    d="M19.5 14.25v-2.625a3.375 3.375 0 00-3.375-3.375h-1.5A1.125 1.125 0 0113.5 7.125v-1.5a3.375 3.375 0 00-3.375-3.375H8.25m0 12.75h7.5m-7.5 3H12M10.5 2.25H5.625c-.621 0-1.125.504-1.125 1.125v17.25c0 .621.504 1.125 1.125 1.125h12.75c.621 0 1.125-.504 1.125-1.125V11.25a9 9 0 00-9-9z"
+                  />
+                </svg>
+              </div>
+              <div className="min-w-0 flex-1 pt-0.5">
+                <p className="text-[0.7rem] font-semibold uppercase tracking-[0.08em] text-stone-500">
+                  Instructions
+                </p>
+                <p className="mt-1.5 break-words text-[0.9375rem] leading-relaxed text-stone-800">
+                  {descriptionLine ? (
+                    descriptionLine
+                  ) : (
+                    <span className="italic text-stone-400">No instructions</span>
+                  )}
+                </p>
+              </div>
+            </div>
           </div>
         </div>
 
