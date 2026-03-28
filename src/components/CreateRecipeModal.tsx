@@ -42,6 +42,22 @@ function normalizeDifficulty(d?: string): FormState['difficulty'] {
   return 'easy';
 }
 
+const AI_SHORT_COST_NOTE =
+  'Note: The recipe is intentionally short to reduce AI usage costs.';
+
+function isShortDueToCostYes(v: unknown): boolean {
+  if (v === true) return true;
+  return typeof v === 'string' && v.trim().toLowerCase() === 'yes';
+}
+
+function appendShortDueToCostNote(instructions: string, append: boolean): string {
+  if (!append) return instructions;
+  const trimmed = instructions.trimEnd();
+  if (trimmed.endsWith(AI_SHORT_COST_NOTE)) return instructions;
+  if (!trimmed) return AI_SHORT_COST_NOTE;
+  return `${trimmed}\n\n${AI_SHORT_COST_NOTE}`;
+}
+
 function recipeToForm(r: RecipeRecord): FormState {
   return {
     title: r.title,
@@ -136,12 +152,17 @@ export function CreateRecipeModal({ open, onClose, editingRecipe, onSuccess }: C
           ? timeRaw
           : parseInt(String(timeRaw ?? '0'), 10) || 0;
 
-      setForm((f) => ({
-        ...f,
-        instructions: recipeText.trim() || f.instructions,
-        difficulty: normalizeDifficulty(diffRaw),
-        cooking_time: cookingNum >= 0 ? cookingNum : f.cooking_time,
-      }));
+      const shortDue = isShortDueToCostYes(o.short_due_to_cost);
+
+      setForm((f) => {
+        const mergedInstructions = recipeText.trim() || f.instructions;
+        return {
+          ...f,
+          instructions: appendShortDueToCostNote(mergedInstructions, shortDue),
+          difficulty: normalizeDifficulty(diffRaw),
+          cooking_time: cookingNum >= 0 ? cookingNum : f.cooking_time,
+        };
+      });
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Network error');
     } finally {
