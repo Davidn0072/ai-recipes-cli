@@ -243,6 +243,7 @@ export function BrowseSearchPanel({ reloadKey, onEditRecipe, onRecipeDeleted }: 
   const [error, setError] = useState<string | null>(null);
   const [deleteError, setDeleteError] = useState<string | null>(null);
   const [deletingId, setDeletingId] = useState<string | null>(null);
+  const [slowLoadHint, setSlowLoadHint] = useState(false);
 
   useEffect(() => {
     setDeleteError(null);
@@ -306,6 +307,16 @@ export function BrowseSearchPanel({ reloadKey, onEditRecipe, onRecipeDeleted }: 
   }, [recipes, query]);
 
   const searchBusy = loading && recipes.length === 0 && !error;
+
+  useEffect(() => {
+    if (!searchBusy) {
+      setSlowLoadHint(false);
+      return;
+    }
+    setSlowLoadHint(false);
+    const id = window.setTimeout(() => setSlowLoadHint(true), 2500);
+    return () => window.clearTimeout(id);
+  }, [searchBusy]);
 
   async function handleDeleteRecipe(recipe: RecipeRecord) {
     if (!recipe._id) return;
@@ -424,7 +435,22 @@ export function BrowseSearchPanel({ reloadKey, onEditRecipe, onRecipeDeleted }: 
       )}
 
       {searchBusy ? (
-        <ListSkeleton />
+        <div className="space-y-4" aria-busy="true">
+          <div
+            role="status"
+            aria-live="polite"
+            className="rounded-2xl border border-amber-200/60 bg-amber-50/50 px-4 py-3 text-sm text-stone-800 shadow-sm ring-1 ring-amber-900/5"
+          >
+            <p className="font-medium text-stone-900">Loading your recipes…</p>
+            <p className="mt-1.5 leading-relaxed text-stone-600">
+              The first request after idle can take a few seconds while the server wakes up.
+            </p>
+            {slowLoadHint ? (
+              <p className="mt-2 leading-relaxed text-stone-600">Still connecting… thanks for waiting.</p>
+            ) : null}
+          </div>
+          <ListSkeleton />
+        </div>
       ) : filtered.length === 0 ? (
         <div className="rounded-2xl border border-dashed border-stone-300 bg-stone-50/80 px-6 py-14 text-center">
           <div className="mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-full bg-amber-100 text-amber-800">
