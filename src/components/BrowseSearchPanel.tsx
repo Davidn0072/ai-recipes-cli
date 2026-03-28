@@ -42,6 +42,17 @@ function ingredientPreview(r: RecipeRecord): string | null {
   return ing.length > 4 ? `${text}…` : text;
 }
 
+/** First 100 characters of instructions; if longer, append "...". */
+const INSTRUCTION_PREVIEW_MAX_CHARS = 100;
+
+function recipeDescriptionPreview(instructions?: string): string | null {
+  if (instructions == null) return null;
+  const text = String(instructions).trim();
+  if (!text) return null;
+  if (text.length <= INSTRUCTION_PREVIEW_MAX_CHARS) return text;
+  return `${text.slice(0, INSTRUCTION_PREVIEW_MAX_CHARS)}...`;
+}
+
 /** Client-side filter: substring match on recipe title only (case-insensitive). */
 function titleMatchesSearch(r: RecipeRecord, q: string): boolean {
   const needle = q.trim().toLowerCase();
@@ -61,6 +72,7 @@ function RecipeCard({
   deletePending: boolean;
 }) {
   const ingredientsLine = ingredientPreview(r);
+  const descriptionLine = recipeDescriptionPreview(r.instructions);
   const hasTime = r.cooking_time != null && r.cooking_time > 0;
 
   return (
@@ -80,36 +92,47 @@ function RecipeCard({
           ) : null}
         </div>
 
-        <div className="mt-3 flex flex-wrap items-center gap-x-3 gap-y-1 text-sm text-stone-600">
-          {hasTime ? (
-            <span className="inline-flex items-center gap-1.5">
-              <svg
-                className="h-4 w-4 shrink-0 text-amber-600/80"
-                fill="none"
-                viewBox="0 0 24 24"
-                stroke="currentColor"
-                aria-hidden
-              >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth={2}
-                  d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"
-                />
-              </svg>
-              <span>{r.cooking_time} min</span>
-            </span>
-          ) : null}
-          {hasTime && ingredientsLine ? (
-            <span className="hidden text-stone-300 sm:inline" aria-hidden>
-              ·
-            </span>
-          ) : null}
-          {ingredientsLine ? (
-            <span className="min-w-0 text-stone-500">{ingredientsLine}</span>
-          ) : !hasTime ? (
-            <span className="text-stone-400 italic">No ingredients listed</span>
-          ) : null}
+        {hasTime ? (
+          <div className="mt-2 inline-flex items-center gap-1.5 text-sm text-stone-600">
+            <svg
+              className="h-4 w-4 shrink-0 text-amber-600/80"
+              fill="none"
+              viewBox="0 0 24 24"
+              stroke="currentColor"
+              aria-hidden
+            >
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth={2}
+                d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"
+              />
+            </svg>
+            <span>{r.cooking_time} min</span>
+          </div>
+        ) : null}
+
+        <div className="mt-3 space-y-3">
+          <div className="rounded-lg bg-stone-50/80 px-2.5 py-2 ring-1 ring-stone-100">
+            <p className="text-[0.65rem] font-semibold uppercase tracking-wide text-stone-500">Ingredients</p>
+            <p className="mt-1 text-sm leading-snug text-stone-700">
+              {ingredientsLine ? (
+                ingredientsLine
+              ) : (
+                <span className="italic text-stone-400">No ingredients listed</span>
+              )}
+            </p>
+          </div>
+          <div className="rounded-lg bg-stone-50/80 px-2.5 py-2 ring-1 ring-stone-100">
+            <p className="text-[0.65rem] font-semibold uppercase tracking-wide text-stone-500">Instructions</p>
+            <p className="mt-1 break-words text-sm leading-relaxed text-stone-800">
+              {descriptionLine ? (
+                descriptionLine
+              ) : (
+                <span className="italic text-stone-400">No instructions</span>
+              )}
+            </p>
+          </div>
         </div>
 
         <div className="mt-4 flex flex-wrap items-center justify-end gap-2 border-t border-stone-100 pt-3">
@@ -218,7 +241,12 @@ export function BrowseSearchPanel({ reloadKey, onEditRecipe, onRecipeDeleted }: 
               ingredients: Array.isArray(o.ingredients)
                 ? o.ingredients.filter((x): x is string => typeof x === 'string')
                 : [],
-              instructions: typeof o.instructions === 'string' ? o.instructions : undefined,
+              instructions:
+                typeof o.instructions === 'string'
+                  ? o.instructions
+                  : o.instructions != null
+                    ? String(o.instructions)
+                    : undefined,
               difficulty: typeof o.difficulty === 'string' ? o.difficulty : undefined,
               cooking_time: typeof o.cooking_time === 'number' ? o.cooking_time : undefined,
             };
