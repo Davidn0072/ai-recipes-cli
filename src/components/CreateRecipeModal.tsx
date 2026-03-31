@@ -75,6 +75,20 @@ function parseIngredients(text: string): string[] {
     .filter(Boolean);
 }
 
+/** Sparkles icon — common visual cue for AI-assisted actions */
+function AiSparklesIcon({ className }: { className?: string }) {
+  return (
+    <svg className={className} fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden>
+      <path
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        strokeWidth={2}
+        d="M9.813 15.904L9 18.75l-.813-2.846a4.5 4.5 0 00-3.09-3.09L2.25 12l2.846-.813a4.5 4.5 0 003.09-3.09L9 5.25l.813 2.846a4.5 4.5 0 003.09 3.09L15.75 12l-2.846.813a4.5 4.5 0 00-3.09 3.09zM18.259 8.715L18 9.75l-.259-1.035a3.375 3.375 0 00-2.455-2.456L14.25 6l1.035-.259a3.375 3.375 0 002.455-2.456L18 2.25l.259 1.035a3.375 3.375 0 002.456 2.456L21.75 6l-1.035.259a3.375 3.375 0 00-2.456 2.456zM16.894 20.567L16.5 21.75l-.394-1.183a2.25 2.25 0 00-1.423-1.423L13.5 18.75l1.183-.394a2.25 2.25 0 001.423-1.423l.394-1.183.394 1.183a2.25 2.25 0 001.423 1.423l1.183.394-1.183.394a2.25 2.25 0 00-1.423 1.423z"
+      />
+    </svg>
+  );
+}
+
 export function CreateRecipeModal({ open, onClose, editingRecipe, onSuccess }: CreateRecipeModalProps) {
   const titleId = useId();
   const titleInputRef = useRef<HTMLInputElement>(null);
@@ -310,36 +324,54 @@ export function CreateRecipeModal({ open, onClose, editingRecipe, onSuccess }: C
             />
           </div>
 
-          <div className="flex flex-col gap-1 rounded-lg border border-violet-100 bg-violet-50/40 px-3 py-2 sm:flex-row sm:items-center sm:justify-between">
-            <p className="text-xs text-stone-600">
-              Optional: generate cooking steps from the title and ingredients above.
-            </p>
+          <div className="flex flex-col gap-3 rounded-xl border-2 border-violet-200/90 bg-gradient-to-br from-violet-50 via-white to-violet-100/40 px-4 py-3 shadow-md shadow-violet-900/10 ring-1 ring-violet-900/[0.07] sm:flex-row sm:items-center sm:justify-between">
+            <div className="min-w-0 flex-1 space-y-1">
+              <div className="flex items-start gap-2">
+                <AiSparklesIcon className="mt-0.5 h-5 w-5 shrink-0 text-violet-600" />
+                <p className="text-sm font-semibold tracking-tight text-violet-950">
+                  Get AI-written instructions
+                </p>
+              </div>
+              <p className="pl-7 text-xs leading-relaxed text-stone-600">
+                Uses your title and ingredients; <span className="font-medium text-stone-800">AI generates</span>{' '}
+                step-by-step cooking steps in the{' '}
+                <span className="font-medium text-stone-800">Instructions</span> field below. Optional.
+              </p>
+            </div>
             <button
               type="button"
               onClick={handleGetAiInstructions}
               disabled={submitting || aiLoading || !canUseAi}
+              aria-busy={aiLoading}
+              aria-label={
+                canUseAi
+                  ? 'Generate cooking instructions with AI from title and ingredients into the Instructions field'
+                  : 'Add a title and at least one ingredient to generate instructions with AI'
+              }
               title={
                 canUseAi
-                  ? 'Generate cooking steps with AI'
+                  ? 'AI writes step-by-step instructions into Instructions (uses title + ingredients)'
                   : 'Add a title and at least one ingredient first'
               }
-              className="inline-flex shrink-0 items-center justify-center gap-1.5 rounded-lg border border-violet-200 bg-white px-3 py-1.5 text-xs font-medium text-violet-900 shadow-sm transition hover:border-violet-300 hover:bg-violet-50 disabled:pointer-events-none disabled:opacity-50"
+              className="inline-flex shrink-0 items-center justify-center gap-2 rounded-lg bg-violet-600 px-4 py-2.5 text-sm font-semibold text-white shadow-md shadow-violet-900/25 transition hover:bg-violet-700 focus:outline-none focus-visible:ring-2 focus-visible:ring-violet-500 focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50"
             >
               {aiLoading ? (
                 <>
-                  <span className="inline-block h-3.5 w-3.5 animate-spin rounded-full border-2 border-violet-400 border-t-transparent" />
+                  <span
+                    className="inline-block h-4 w-4 animate-spin rounded-full border-2 border-white/40 border-t-white"
+                    aria-hidden
+                  />
                   Generating…
                 </>
               ) : (
                 <>
-                  <svg className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden>
-                    <path
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      strokeWidth={2}
-                      d="M13 10V3L4 14h7v7l9-11h-7z"
-                    />
-                  </svg>
+                  <AiSparklesIcon className="h-5 w-5 shrink-0" />
+                  <span
+                    className="rounded-md bg-white/20 px-1.5 py-0.5 text-[0.65rem] font-bold uppercase tabular-nums tracking-wide text-white"
+                    aria-hidden
+                  >
+                    AI
+                  </span>
                   Generate with AI
                 </>
               )}
@@ -350,7 +382,11 @@ export function CreateRecipeModal({ open, onClose, editingRecipe, onSuccess }: C
             <label htmlFor="recipe-instructions" className="block text-sm font-medium text-stone-700">
               Instructions
             </label>
-            <p className="mt-0.5 text-xs text-stone-500">How to cook it, or use Generate with AI above</p>
+            <p className="mt-0.5 text-xs text-stone-500">
+              How to cook it — type your own steps, or use{' '}
+              <span className="font-medium text-stone-700">Generate with AI</span> above so{' '}
+              <span className="font-medium text-stone-700">AI writes</span> the steps into this field.
+            </p>
             <textarea
               id="recipe-instructions"
               value={form.instructions}
