@@ -31,7 +31,7 @@ const EXAMPLE_FORM: FormState = {
   title: 'Quick tomato pasta',
   ingredientsText: 'spaghetti\nolive oil\ngarlic\ncanned tomatoes\nfresh basil',
   instructions:
-    '1. Cook spaghetti until al dente; reserve a cup of pasta water.\n2. Sauté sliced garlic in olive oil until fragrant.\n3. Add tomatoes, simmer 10 min; season with salt and pepper.\n4. Toss pasta with sauce, adding pasta water as needed. Top with basil.',
+    '👋 Tip: click the purple "Generate with AI" button above — AI fills these steps for you ✨',
   difficulty: 'easy',
   cooking_time: 25,
 };
@@ -96,6 +96,9 @@ export function CreateRecipeModal({ open, onClose, editingRecipe, onSuccess }: C
   const [submitting, setSubmitting] = useState(false);
   const [aiLoading, setAiLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  /** True for first 5s after opening “New recipe” — subtle pulse on Fill with example, then unset */
+  const [fillExampleHighlight, setFillExampleHighlight] = useState(false);
+  const fillExampleHintId = useId();
 
   const isEdit = Boolean(editingRecipe?._id);
 
@@ -122,6 +125,19 @@ export function CreateRecipeModal({ open, onClose, editingRecipe, onSuccess }: C
     if (!open || isEdit) return;
     const id = window.setTimeout(() => titleInputRef.current?.focus(), 0);
     return () => window.clearTimeout(id);
+  }, [open, isEdit]);
+
+  useEffect(() => {
+    if (!open || isEdit) {
+      setFillExampleHighlight(false);
+      return;
+    }
+    setFillExampleHighlight(true);
+    const t = window.setTimeout(() => setFillExampleHighlight(false), 5000);
+    return () => {
+      window.clearTimeout(t);
+      setFillExampleHighlight(false);
+    };
   }, [open, isEdit]);
 
   if (!open) return null;
@@ -262,17 +278,35 @@ export function CreateRecipeModal({ open, onClose, editingRecipe, onSuccess }: C
         </div>
 
         <div className="mt-1 flex flex-wrap gap-1.5">
-          <button
-            type="button"
-            onClick={() => {
-              setError(null);
-              setForm(EXAMPLE_FORM);
-            }}
-            disabled={submitting || aiLoading}
-            className="rounded-lg border border-stone-200 bg-stone-50 px-3 py-1.5 text-xs font-medium text-stone-800 shadow-sm transition hover:bg-stone-100 disabled:pointer-events-none disabled:opacity-50"
-          >
-            Fill with example
-          </button>
+          <div className="group relative inline-block">
+            <button
+              type="button"
+              onClick={() => {
+                setError(null);
+                setForm(EXAMPLE_FORM);
+                setFillExampleHighlight(false);
+              }}
+              disabled={submitting || aiLoading}
+              aria-describedby={fillExampleHintId}
+              aria-label="Fill with example"
+              title="Loads a sample recipe into all fields"
+              className={`rounded-lg border border-stone-200 bg-stone-50 px-3 py-1.5 text-xs font-semibold uppercase tracking-wide text-stone-800 shadow-sm transition duration-200 hover:scale-[1.03] hover:bg-amber-50/90 hover:border-amber-300/80 active:scale-[0.98] focus:outline-none focus-visible:ring-2 focus-visible:ring-amber-500/50 focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 ${
+                fillExampleHighlight
+                  ? 'animate-pulse ring-2 ring-amber-400/80 ring-offset-2 ring-offset-white'
+                  : ''
+              }`}
+            >
+              Fill with example
+            </button>
+            <p
+              id={fillExampleHintId}
+              role="tooltip"
+              className="pointer-events-none invisible absolute left-1/2 top-full z-20 mt-2 w-max max-w-[min(288px,calc(100vw-3rem))] -translate-x-1/2 rounded-lg border border-stone-700/90 bg-stone-900 px-3 py-2 text-left text-[11px] leading-snug text-stone-100 opacity-0 shadow-lg transition duration-200 group-hover:visible group-hover:opacity-100 group-focus-within:visible group-focus-within:opacity-100"
+            >
+              Loads a sample recipe (tomato pasta) into every field—edit it, save it, or try{' '}
+              <span className="font-medium text-amber-200/95">Generate with AI</span>.
+            </p>
+          </div>
           <button
             type="button"
             onClick={() => {
