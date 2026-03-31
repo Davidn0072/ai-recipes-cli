@@ -283,7 +283,7 @@ export function CreateRecipeModal({ open, onClose, editingRecipe, onSuccess }: C
               type="text"
               value={form.title}
               onChange={(e) => setForm((f) => ({ ...f, title: e.target.value }))}
-              placeholder="e.g. Lemon-roast chicken"
+              placeholder="e.g. Cake, Omelette, Salad, Pasta, Lemon-roast chicken"
               className="mt-1 w-full rounded-lg border border-stone-200 px-3 py-2 text-stone-900 shadow-sm placeholder:text-stone-400 focus:border-amber-500/60 focus:outline-none focus:ring-2 focus:ring-amber-500/25"
               autoComplete="off"
               disabled={submitting || aiLoading}
@@ -302,7 +302,9 @@ export function CreateRecipeModal({ open, onClose, editingRecipe, onSuccess }: C
               value={form.ingredientsText}
               onChange={(e) => setForm((f) => ({ ...f, ingredientsText: e.target.value }))}
               rows={3}
-              placeholder={'e.g.\nchicken thighs\nlemon\ngarlic\nolive oil'}
+              placeholder={
+                'e.g.\nMilk, eggs, margarine, chocolate\nchicken thighs\nlemon\ngarlic\nolive oil'
+              }
               className="mt-1 w-full rounded-lg border border-stone-200 px-3 py-2 text-stone-900 shadow-sm placeholder:text-stone-400 focus:border-amber-500/60 focus:outline-none focus:ring-2 focus:ring-amber-500/25"
               disabled={submitting || aiLoading}
             />
