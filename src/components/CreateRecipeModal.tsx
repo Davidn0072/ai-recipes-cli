@@ -1,4 +1,4 @@
-import { useEffect, useId, useRef, useState } from 'react';
+import { useCallback, useEffect, useId, useRef, useState } from 'react';
 import { API_BASE } from '../api';
 import type { RecipeRecord } from './BrowseSearchPanel';
 
@@ -99,6 +99,21 @@ export function CreateRecipeModal({ open, onClose, editingRecipe, onSuccess }: C
   /** True for first 5s after opening “New recipe” — subtle pulse on Fill with example, then unset */
   const [fillExampleHighlight, setFillExampleHighlight] = useState(false);
   const fillExampleHintId = useId();
+  /** After Fill with example: cue starts 5s later, runs 5s — pulse on Generate with AI */
+  const [aiButtonCue, setAiButtonCue] = useState(false);
+  const aiCueStartTimerRef = useRef<ReturnType<typeof window.setTimeout> | null>(null);
+  const aiCueEndTimerRef = useRef<ReturnType<typeof window.setTimeout> | null>(null);
+
+  const clearAiCueTimers = useCallback(() => {
+    if (aiCueStartTimerRef.current != null) {
+      window.clearTimeout(aiCueStartTimerRef.current);
+      aiCueStartTimerRef.current = null;
+    }
+    if (aiCueEndTimerRef.current != null) {
+      window.clearTimeout(aiCueEndTimerRef.current);
+      aiCueEndTimerRef.current = null;
+    }
+  }, []);
 
   const isEdit = Boolean(editingRecipe?._id);
 
@@ -140,6 +155,17 @@ export function CreateRecipeModal({ open, onClose, editingRecipe, onSuccess }: C
     };
   }, [open, isEdit]);
 
+  useEffect(() => {
+    if (!open) {
+      clearAiCueTimers();
+      setAiButtonCue(false);
+    }
+    return () => {
+      clearAiCueTimers();
+      setAiButtonCue(false);
+    };
+  }, [open, clearAiCueTimers]);
+
   if (!open) return null;
 
   const ingredientsForAi = parseIngredients(form.ingredientsText);
@@ -156,6 +182,8 @@ export function CreateRecipeModal({ open, onClose, editingRecipe, onSuccess }: C
       setError('Add at least one ingredient before requesting AI instructions.');
       return;
     }
+    clearAiCueTimers();
+    setAiButtonCue(false);
     setError(null);
     setAiLoading(true);
     try {
@@ -283,8 +311,18 @@ export function CreateRecipeModal({ open, onClose, editingRecipe, onSuccess }: C
               type="button"
               onClick={() => {
                 setError(null);
+                clearAiCueTimers();
+                setAiButtonCue(false);
                 setForm(EXAMPLE_FORM);
                 setFillExampleHighlight(false);
+                aiCueStartTimerRef.current = window.setTimeout(() => {
+                  aiCueStartTimerRef.current = null;
+                  setAiButtonCue(true);
+                }, 5000);
+                aiCueEndTimerRef.current = window.setTimeout(() => {
+                  aiCueEndTimerRef.current = null;
+                  setAiButtonCue(false);
+                }, 10000);
               }}
               disabled={submitting || aiLoading}
               aria-describedby={fillExampleHintId}
@@ -311,6 +349,8 @@ export function CreateRecipeModal({ open, onClose, editingRecipe, onSuccess }: C
             type="button"
             onClick={() => {
               setError(null);
+              clearAiCueTimers();
+              setAiButtonCue(false);
               setForm(emptyForm());
             }}
             disabled={submitting || aiLoading}
@@ -387,7 +427,11 @@ export function CreateRecipeModal({ open, onClose, editingRecipe, onSuccess }: C
                   ? 'AI writes step-by-step instructions into Instructions (uses title + ingredients)'
                   : 'Add a title and at least one ingredient first'
               }
-              className="inline-flex shrink-0 items-center justify-center gap-2 rounded-lg bg-violet-600 px-4 py-2.5 text-sm font-semibold text-white shadow-md shadow-violet-900/25 transition hover:bg-violet-700 focus:outline-none focus-visible:ring-2 focus-visible:ring-violet-500 focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50"
+              className={`inline-flex shrink-0 items-center justify-center gap-2 rounded-lg bg-violet-600 px-4 py-2.5 text-sm font-semibold text-white shadow-md shadow-violet-900/25 transition duration-200 hover:bg-violet-700 focus:outline-none focus-visible:ring-2 focus-visible:ring-violet-500 focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 ${
+                aiButtonCue && canUseAi && !aiLoading
+                  ? 'animate-pulse scale-[1.02] ring-2 ring-amber-300 ring-offset-2 ring-offset-violet-600 shadow-lg shadow-violet-400/45'
+                  : ''
+              }`}
             >
               {aiLoading ? (
                 <>
